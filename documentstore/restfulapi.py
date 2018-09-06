@@ -9,14 +9,18 @@ from pyramid.httpexceptions import (
 )
 from cornice import Service
 from cornice.validators import colander_body_validator
+from cornice.service import get_services
 import colander
 from slugify import slugify
+from cornice_swagger import CorniceSwagger
 
 from . import services
 from . import adapters
 from . import exceptions
 
 LOGGER = logging.getLogger(__name__)
+
+swagger = Service(name="OpenAPI", path="/__api__", description="OpenAPI documentation.")
 
 documents = Service(
     name="documents",
@@ -75,6 +79,11 @@ class AssetSchema(colander.MappingSchema):
 
 @documents.get(accept="text/xml", renderer="xml")
 def fetch_document_data(request):
+    """Obtém o conteúdo do documento representado em XML com todos os
+    apontamentos para seus ativos digitais contextualizados de acordo com a
+    versão do documento. Produzirá uma resposta com o código HTTP 404 caso o
+    documento solicitado não seja conhecido pela aplicação.
+    """
     when = request.GET.get("when", None)
     if when:
         version = {"version_at": when}
@@ -95,6 +104,12 @@ def put_document(request):
     
     A semântica desta view-function está definida conforme a especificação:
     https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.6
+
+    Em resumo, ``PUT /documents/:doc_id`` com o payload válido de acordo com o 
+    schema documentado, e para um ``:doc_id`` inédito, resultará no registro do 
+    documento e produzirá uma resposta com o código HTTP 201 Created. Qualquer
+    requisição subsequente para o mesmo recurso produzirá respostas com o código
+    HTTP 204 No Content.
     """
     data_url = request.validated["data"]
     assets = {
@@ -123,6 +138,9 @@ def put_document(request):
 
 @manifest.get(accept="application/json", renderer="json")
 def get_manifest(request):
+    """Obtém o manifesto do documento. Produzirá uma resposta com o código
+    HTTP 404 caso o documento não seja conhecido pela aplicação.
+    """
     try:
         return request.services["fetch_document_manifest"](
             id=request.matchdict["document_id"]
@@ -140,6 +158,10 @@ def slugify_assets_ids(assets, slug_fn=slugify):
 
 @assets_list.get(accept="application/json", renderer="json")
 def get_assets_list(request):
+    """Obtém relação dos ativos associados ao documento em determinada
+    versão. Produzirá uma resposta com o código HTTP 404 caso o documento não
+    seja conhecido pela aplicação.
+    """
     try:
         assets = request.services["fetch_assets_list"](
             id=request.matchdict["document_id"]
@@ -202,6 +224,13 @@ def diff_document_versions(request):
         raise HTTPNotFound(exc)
 
 
+@swagger.get()
+def openAPI_spec(request):
+    doc = CorniceSwagger(get_services())
+    doc.summary_docstrings = True
+    return doc.generate("document_store", "0.1")
+
+
 class XMLRenderer:
     """Renderizador para dados do tipo ``text/xml``.
 
@@ -241,6 +270,7 @@ class PlainTextRenderer:
 def main(global_config, **settings):
     config = Configurator(settings=settings)
     config.include("cornice")
+    config.include("cornice_swagger")
     config.scan()
     config.add_renderer("xml", XMLRenderer)
     config.add_renderer("text", PlainTextRenderer)
