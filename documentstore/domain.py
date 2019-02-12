@@ -36,6 +36,13 @@ def utcnow():
     return str(datetime.utcnow().isoformat() + "Z")
 
 
+def add_date(item, label='date'):
+    data = item[1]
+    if label not in data.keys():
+        data[label] = item[0]
+    return data
+
+
 class DocumentManifest:
     """Namespace para funções que manipulam o manifesto do documento.
     """
@@ -609,17 +616,17 @@ class Journal:
     def status(self):
         return BundleManifest.get_metadata(self.manifest, "status")
 
-    @current_status.setter
+    @status.setter
     def status(self, value: str):
         try:
             value = dict(value)
         except (TypeError, ValueError):
             raise TypeError(
                 "cannot set status with value "
-                '"%s": value must be dict' % value
+                '"%s": value must be dict' % repr(value)
             ) from None
         self.manifest = BundleManifest.set_metadata(
-            self.manifest, "status", value
+            self._manifest, "status", value
         )
 
     @property
@@ -693,4 +700,4 @@ class Journal:
 
     @property
     def status_history(self):
-        return BundleManifest.get_metadata(self.manifest, "status")
+        return [add_date(item) for item in self.manifest.get("status", [])]

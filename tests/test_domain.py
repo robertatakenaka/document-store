@@ -58,6 +58,20 @@ class UnittestMixin:
 new_bundle = functools.partial(domain.BundleManifest.new, now=fake_utcnow)
 
 
+class AddDateTests(unittest.TestCase):
+    def test_add_date_do_not_change(self):
+        data = domain.add_date(['2018-01-12', {'date': '12'}])
+        self.assertEqual(data, {'date': '12'})
+
+    def test_add_date_changes(self):
+        data = domain.add_date(['2018-01-12', {'item': '12'}])
+        self.assertEqual(data, {'item': '12', 'date': '2018-01-12'})
+
+    def test_add_date_change_label(self):
+        data = domain.add_date(['2018-01-12', {'item': '12'}], 'DATE')
+        self.assertEqual(data, {'item': '12', 'DATE': '2018-01-12'})
+
+
 class DocumentTests(unittest.TestCase):
     def make_one(self):
         _manifest = deepcopy(SAMPLE_MANIFEST)
@@ -825,11 +839,11 @@ class JournalTest(UnittestMixin, unittest.TestCase):
 
     def test_set_status(self):
         journal = domain.Journal(id="0034-8910-rsp-48-2")
-        journal.status = "current"
-        self.assertEqual(journal.status, "current")
+        journal.status = {"status": "current"}
+        self.assertEqual(journal.status, {"status": "current"})
         self.assertEqual(
             journal.manifest["metadata"]["status"],
-            [("2018-08-05T22:33:49.795151Z", "current")],
+            [("2018-08-05T22:33:49.795151Z", {"status": "current"})],
         )
 
     def test_unpublish_reason_is_empty_str(self):
@@ -1093,17 +1107,14 @@ class JournalTest(UnittestMixin, unittest.TestCase):
 
     def test_status_history(self):
         expected = [
-            ("2015-08-05T22:33:49.795151Z", {"status": "CURRENT"}),
-            ("2017-08-05T22:33:49.795151Z", {"status": "SUSPENDED", "notes": "motivo"}),
-            ("2018-08-05T22:33:49.795151Z", {"status": "CEASED"}),
+            {"date": "2018-01-19", "status": "CURRENT"},
+            {"date": "2018-01-19", "status": "SUSPENDED", "notes": "motivo"},
+            {"date": "2018-01-19", "status": "CEASED"},
         ]
         journal = domain.Journal(id="0034-8910-rsp-48-2")
-        journal.status = {"status": "CURRENT"}
-        journal.status = {"status": "SUSPENDED", "notes": "motivo"}
-        journal.status = {"status": "CEASED"}
-        self.assertEqual(
-            journal.manifest["metadata"]["status_history"][-1], expected[-1]
-        )
+        journal.status = {"date": "2018-01-19", "status": "CURRENT"}
+        journal.status = {"date": "2018-01-19", "status": "SUSPENDED", "notes": "motivo"}
+        journal.status = {"date": "2018-01-19", "status": "CEASED"}
         self.assertEqual(
             [item[0] for item in journal.status_history],
             sorted([item[0] for item in journal.status_history]),
