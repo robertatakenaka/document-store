@@ -819,16 +819,16 @@ class JournalTest(UnittestMixin, unittest.TestCase):
             [("2018-08-05T22:33:49.795151Z", "1809-4392")],
         )
 
-    def test_current_status_is_empty_str(self):
+    def test_status_is_empty_str(self):
         journal = domain.Journal(id="0034-8910-rsp-48-2")
-        self.assertEqual(journal.current_status, "")
+        self.assertEqual(journal.status, "")
 
-    def test_set_current_status(self):
+    def test_set_status(self):
         journal = domain.Journal(id="0034-8910-rsp-48-2")
-        journal.current_status = "current"
-        self.assertEqual(journal.current_status, "current")
+        journal.status = "current"
+        self.assertEqual(journal.status, "current")
         self.assertEqual(
-            journal.manifest["metadata"]["current_status"],
+            journal.manifest["metadata"]["status"],
             [("2018-08-05T22:33:49.795151Z", "current")],
         )
 
@@ -1089,4 +1089,26 @@ class JournalTest(UnittestMixin, unittest.TestCase):
             journal,
             "metrics",
             "metrics-invalid",
+        )
+
+    def test_status_history(self):
+        expected = [
+            ("2015-08-05T22:33:49.795151Z", {"status": "CURRENT"}),
+            ("2017-08-05T22:33:49.795151Z", {"status": "SUSPENDED", "notes": "motivo"}),
+            ("2018-08-05T22:33:49.795151Z", {"status": "CEASED"}),
+        ]
+        journal = domain.Journal(id="0034-8910-rsp-48-2")
+        journal.status = {"status": "CURRENT"}
+        journal.status = {"status": "SUSPENDED", "notes": "motivo"}
+        journal.status = {"status": "CEASED"}
+        self.assertEqual(
+            journal.manifest["metadata"]["status_history"][-1], expected[-1]
+        )
+        self.assertEqual(
+            [item[0] for item in journal.status_history],
+            sorted([item[0] for item in journal.status_history]),
+        )
+        self.assertEqual(
+            [item[1] for item in journal.status_history],
+            sorted([item[1] for item in journal.status_history]),
         )
