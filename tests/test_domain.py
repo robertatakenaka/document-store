@@ -1330,3 +1330,60 @@ class JournalTest(UnittestMixin, unittest.TestCase):
             "contact",
             "contact-invalid",
         )
+
+    def test_insert_documents_bundle_position_first(self):
+        journal = domain.Journal(id="0034-8910-rsp")
+        journal._manifest["items"] = [
+            "/documents-bundles/0034-8910-rsp-48-3",
+            "/documents-bundles/0034-8910-rsp-48-4",
+            "/documents-bundles/0034-8910-rsp-48-5",
+        ]
+        journal.insert_documents_bundle(0, "/documents-bundles/0034-8910-rsp-48-2")
+        self.assertEqual(
+            "/documents-bundles/0034-8910-rsp-48-2", journal._manifest["items"][0]
+        )
+        self.assertEqual(4, len(journal._manifest["items"]))
+
+    def test_insert_documents_bundle_position_last(self):
+        journal = domain.Journal(id="0034-8910-rsp")
+        journal._manifest["items"] = [
+            "/documents-bundles/0034-8910-rsp-48-3",
+            "/documents-bundles/0034-8910-rsp-48-4",
+            "/documents-bundles/0034-8910-rsp-48-5",
+        ]
+        journal.insert_documents_bundle(10, "/documents-bundles/0034-8910-rsp-48-2")
+        self.assertEqual(
+            "/documents-bundles/0034-8910-rsp-48-2", journal._manifest["items"][-1]
+        )
+        self.assertEqual(4, len(journal._manifest["items"]))
+
+    def test_insert_documents_bundle_position_2(self):
+        journal = domain.Journal(id="0034-8910-rsp")
+        journal._manifest["items"] = [
+            "/documents-bundles/0034-8910-rsp-48-3",
+            "/documents-bundles/0034-8910-rsp-48-4",
+            "/documents-bundles/0034-8910-rsp-48-5",
+        ]
+        journal.insert_documents_bundle(2, "/documents-bundles/0034-8910-rsp-48-2")
+        self.assertEqual(
+            "/documents-bundles/0034-8910-rsp-48-2", journal._manifest["items"][2]
+        )
+        self.assertEqual(
+            "/documents-bundles/0034-8910-rsp-48-4", journal._manifest["items"][1]
+        )
+        self.assertEqual(
+            "/documents-bundles/0034-8910-rsp-48-5", journal._manifest["items"][3]
+        )
+        self.assertEqual(4, len(journal._manifest["items"]))
+
+    def test_insert_documents_bundle_raises_exception_if_item_already_exists(self):
+        journal = domain.Journal(id="0034-8910-rsp-48-2")
+        journal.insert_documents_bundle(0, "/documents-bundles/0034-8910-rsp-48-2")
+        self._assert_raises_with_message(
+            exceptions.AlreadyExists,
+            'cannot insert item "/documents-bundles/0034-8910-rsp-48-2" in bundle: '
+            "the item already exists",
+            journal.insert_documents_bundle,
+            1,
+            "/documents-bundles/0034-8910-rsp-48-2",
+        )

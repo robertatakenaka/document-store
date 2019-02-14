@@ -788,3 +788,6 @@ class Journal:
             ) from None
 
         self.manifest = BundleManifest.set_metadata(self._manifest, "contact", value)
+
+    def insert_documents_bundle(self, index: int, bundle: str):
+        self.manifest = BundleManifest.insert_item(self._manifest, index, bundle)
